@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -12,40 +11,42 @@
     <ViewFlipper
         android:id="@+id/view_flipper"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"
-        android:layout_weight="0.5"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
         android:autoStart="true"
         android:flipInterval="5000"
         android:inAnimation="@android:anim/slide_in_left"
         android:outAnimation="@android:anim/slide_out_right">
 
         <ImageView
+            android:id="@+id/image1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:src="@drawable/slide02" />
 
         <ImageView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:src="@drawable/slide03" />
 
         <ImageView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_gravity="center"
             android:src="@drawable/slide01" />
 
     </ViewFlipper>
 
     <RelativeLayout
-        android:layout_weight="0.5"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
-
 
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_alignBottom="@+id/control"
             android:layout_alignTop="@+id/control">
 
             <LinearLayout
@@ -56,16 +57,16 @@
                 <ImageView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
                     android:layout_weight=".5"
-                    android:src="@drawable/mic2"
-                    android:layout_margin="5dp" />
+                    android:src="@drawable/mic2" />
 
                 <ImageView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_margin="5dp"
                     android:layout_weight=".5"
-                    android:src="@drawable/mic1"
-                    android:layout_margin="5dp" />
+                    android:src="@drawable/mic1" />
 
             </LinearLayout>
         </RelativeLayout>
@@ -74,23 +75,25 @@
             android:id="@+id/control"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentBottom="true"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:weightSum="2">
+
             <RelativeLayout
                 android:id="@+id/start_stop_layout"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_weight="2"
                 android:background="@drawable/color_transition"
                 android:paddingBottom="@dimen/activity_vertical_margin">
 
                 <ImageView
                     android:id="@+id/wave_image"
                     android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:src="@drawable/wave1"
-                    android:layout_centerHorizontal="true"
+                    android:layout_height="wrap_content"
+                    android:layout_alignBottom="@+id/m_start_play"
                     android:layout_alignTop="@+id/m_start_play"
-                    android:layout_alignBottom="@+id/m_start_play" />
+                    android:layout_centerHorizontal="true"
+                    android:src="@drawable/wave1" />
 
                 <ImageButton
                     android:id="@+id/m_start_play"
@@ -114,6 +117,7 @@
                 android:id="@+id/volume"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_weight="3"
                 android:background="#18394a"
                 android:orientation="horizontal">
 
@@ -126,10 +130,10 @@
 
                 <SeekBar
                     android:id="@+id/seekBar"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
-                    android:layout_weight="1" />
+                    android:layout_weight="3" />
 
                 <ImageButton
                     android:id="@+id/volume_up"

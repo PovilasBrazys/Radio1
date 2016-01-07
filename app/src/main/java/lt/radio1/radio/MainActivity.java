@@ -1,7 +1,12 @@
 package lt.radio1.radio;
 
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
@@ -16,19 +21,38 @@ import android.widget.ViewFlipper;
 
 import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener, MediaPlayer.OnInfoListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener  {
 
     private ImageButton buttonPlay, buttonStopPlay;
     private ImageButton buttonVolumeUp, buttonVolumeDown;
     private ViewFlipper mViewFlipper;
     private ImageView imageWave;
-    private MediaPlayer player;
+//    private MediaPlayer player;
     private Toolbar mToolbar;
     private SeekBar mSeekBar;
     private static final int maxVolume = 100;
     private int playerVolume = 100;
     private float volume;
     private Animation rotate;
+
+    RadioStationService mService;
+    boolean mBound = false;
+    private ServiceConnection mConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance
+            RadioStationService.LocalBinder binder = (RadioStationService.LocalBinder) service;
+            mService = binder.getService();
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            mBound = false;
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -39,7 +63,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         initializeUIElements();
 
-        initializeMediaPlayer();
+        //initializeMediaPlayer();
+
 
     }
 
@@ -72,7 +97,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 playerVolume = mSeekBar.getProgress() == 100 ? 99 : mSeekBar.getProgress();
                 volume = (float) (1 - (Math.log(maxVolume - playerVolume) / Math.log(maxVolume)));
-                player.setVolume(volume, volume);
+                mService.setPlayerVolume(volume);
             }
 
             @Override
@@ -113,7 +138,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         buttonStopPlay.setVisibility(View.VISIBLE);
         buttonPlay.setVisibility(View.INVISIBLE);
 
-        volume = (float) (1 - (Math.log(maxVolume - playerVolume) / Math.log(maxVolume)));
+
+        // Bind to LocalService
+        Intent intent = new Intent(this, RadioStationService.class);
+        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+        imageWave.startAnimation(rotate);
+        /*volume = (float) (1 - (Math.log(maxVolume - playerVolume) / Math.log(maxVolume)));
 
         player.setVolume(volume, volume);
         player.prepareAsync();
@@ -121,35 +151,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         player.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             public void onPrepared(MediaPlayer mp) {
                 player.start();
-                imageWave.startAnimation(rotate);
             }
-        });
-
-        /*new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-
-                }
-            }
-        }).start();*/
+        });*/
 
     }
 
-    private void stopPlaying() {
-        if (player.isPlaying()) {
-            player.stop();
-            player.release();
-            initializeMediaPlayer();
-        }
-
-        buttonPlay.setVisibility(View.VISIBLE);
-        buttonStopPlay.setVisibility(View.INVISIBLE);
-
-        imageWave.setAnimation(null);
-    }
-
-    private void initializeMediaPlayer() {
+    /*private void initializeMediaPlayer() {
         player = new MediaPlayer();
         player.setOnInfoListener(this);
         try {
@@ -168,18 +175,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
 
-    }
+    }*/
 
-    @Override
-    public boolean onInfo(MediaPlayer mp, int what, int extra) {
-        Log.d("SONGINFO", "alo"+what);
-        return false;
+    private void stopPlaying() {
+        /*if (player.isPlaying()) {
+            player.stop();
+            player.release();
+            initializeMediaPlayer();
+        }*/
+        unbindService(mConnection);
+
+        buttonPlay.setVisibility(View.VISIBLE);
+        buttonStopPlay.setVisibility(View.INVISIBLE);
+
+        imageWave.setAnimation(null);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        stopPlaying();
+        //stopPlaying();
     }
 
     @Override
