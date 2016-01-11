@@ -1,58 +1,62 @@
 package lt.radio1.radio;
 
+import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
+import android.text.TextUtils;
 import android.util.Log;
+import android.util.TypedValue;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.SeekBar;
+import android.widget.TableRow;
+import android.widget.TextView;
 import android.widget.ViewFlipper;
 
 import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener  {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener {
+
+    private static final String TAG = MainActivity.class.getName();
 
     private ImageButton buttonPlay, buttonStopPlay;
     private ImageButton buttonVolumeUp, buttonVolumeDown;
     private ViewFlipper mViewFlipper;
     private ImageView imageWave;
-//    private MediaPlayer player;
+    private TextView songTitle;
     private Toolbar mToolbar;
     private SeekBar mSeekBar;
     private static final int maxVolume = 100;
     private int playerVolume = 100;
     private float volume;
     private Animation rotate;
+    private Intent titleService;
+    private final GestureDetector detector = new GestureDetector(new SwipeGestureDetector());
+
 
     RadioStationService mService;
     boolean mBound = false;
-    private ServiceConnection mConnection = new ServiceConnection() {
 
-        @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-            // We've bound to LocalService, cast the IBinder and get LocalService instance
-            RadioStationService.LocalBinder binder = (RadioStationService.LocalBinder) service;
-            mService = binder.getService();
-            mBound = true;
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-            mBound = false;
-        }
-    };
+    private MyBroadcastReceiver_Update myBroadcastReceiver_Update;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -63,10 +67,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         initializeUIElements();
 
-        //initializeMediaPlayer();
+        myBroadcastReceiver_Update = new MyBroadcastReceiver_Update();
 
+        IntentFilter intentFilter_update = new IntentFilter(TitleService.ACTION_MyUpdate);
+        intentFilter_update.addCategory(Intent.CATEGORY_DEFAULT);
+        registerReceiver(myBroadcastReceiver_Update, intentFilter_update);
 
+        titleService = new Intent(this, TitleService.class);
+        startService(titleService);
     }
+
+    public class MyBroadcastReceiver_Update extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String update = intent.getStringExtra(TitleService.EXTRA_KEY_UPDATE);
+            Log.d(TAG, "Update " + update);
+            songTitle.setText(update);
+        }
+    }
+
 
     private void initializeUIElements() {
 
@@ -84,10 +104,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         buttonVolumeDown.setOnClickListener(this);
         buttonVolumeDown.setOnLongClickListener(this);
 
+        songTitle = (TextView) findViewById(R.id.song_title);
+        //songTitle.startAnimation(AnimationUtils.loadAnimation(this, R.anim.moving_text));
+
+
         imageWave = (ImageView) findViewById(R.id.wave_image);
         rotate = AnimationUtils.loadAnimation(this, R.anim.wobble);
 
         mViewFlipper = (ViewFlipper) findViewById(R.id.view_flipper);
+        mViewFlipper.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(final View view, final MotionEvent event) {
+                detector.onTouchEvent(event);
+                return true;
+            }
+        });
 
         mSeekBar = (SeekBar) findViewById(R.id.seekBar);
         mSeekBar.setMax(maxVolume);
@@ -111,13 +142,77 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+    private static final int SWIPE_MIN_DISTANCE = 120;
+    private static final int SWIPE_THRESHOLD_VELOCITY = 200;
+
+    class SwipeGestureDetector extends GestureDetector.SimpleOnGestureListener {
+
+        boolean isFlipping = true;
+        Handler handler = new Handler();
+        Runnable run1 = new Runnable() {
+            @Override
+            public void run() {
+                mViewFlipper.startFlipping();
+                mViewFlipper.showNext();
+                isFlipping = true;
+            }
+        };
+        Runnable run2 = new Runnable() {
+            @Override
+            public void run() {
+                mViewFlipper.startFlipping();
+                mViewFlipper.showPrevious();
+                isFlipping = true;
+            }
+        };
+
+        @Override
+        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+            try {
+                // right to left swipe
+                if (e1.getX() - e2.getX() > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
+                    mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_in_right));
+                    mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_out_left));
+                    mViewFlipper.showNext();
+                    if (isFlipping) {
+                        mViewFlipper.stopFlipping();
+                        handler.postDelayed(run1, 5000);
+                        isFlipping = false;
+                    } else {
+                        handler.removeCallbacks(run1);
+                        handler.postDelayed(run1, 5000);
+                    }
+                    return true;
+                } else if (e2.getX() - e1.getX() > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
+                    mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_in_left));
+                    mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_out_right));
+                    mViewFlipper.showPrevious();
+                    if (isFlipping) {
+                        mViewFlipper.stopFlipping();
+                        handler.postDelayed(run2, 5000);
+                        isFlipping = false;
+                    } else {
+                        handler.removeCallbacks(run2);
+                        handler.postDelayed(run2, 5000);
+                    }
+                    return true;
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            return false;
+        }
+    }
+
     public void onClick(View v) {
         switch (v.getId()) {
-            case R.id.m_start_play:
-                startPlaying();
-                break;
             case R.id.m_stop_play:
                 stopPlaying();
+                break;
+            case R.id.m_start_play:
+                startPlaying();
                 break;
             case R.id.volume_up:
                 if (playerVolume != 100) {
@@ -138,51 +233,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         buttonStopPlay.setVisibility(View.VISIBLE);
         buttonPlay.setVisibility(View.INVISIBLE);
 
-
-        // Bind to LocalService
         Intent intent = new Intent(this, RadioStationService.class);
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
-        imageWave.startAnimation(rotate);
-        /*volume = (float) (1 - (Math.log(maxVolume - playerVolume) / Math.log(maxVolume)));
+        //volume = (float) (1 - (Math.log(maxVolume - playerVolume) / Math.log(maxVolume)));
 
-        player.setVolume(volume, volume);
-        player.prepareAsync();
-
-        player.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-            public void onPrepared(MediaPlayer mp) {
-                player.start();
-            }
-        });*/
 
     }
 
-    /*private void initializeMediaPlayer() {
-        player = new MediaPlayer();
-        player.setOnInfoListener(this);
-        try {
-            player.setDataSource("http://95.154.254.83:5394/");
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-        } catch (IllegalStateException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        player.setOnBufferingUpdateListener(new MediaPlayer.OnBufferingUpdateListener() {
-            public void onBufferingUpdate(MediaPlayer mp, int percent) {
-                Log.d("LAG", "test");
-            }
-        });
-
-    }*/
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(myBroadcastReceiver_Update);
+    }
 
     private void stopPlaying() {
-        /*if (player.isPlaying()) {
-            player.stop();
-            player.release();
-            initializeMediaPlayer();
-        }*/
         unbindService(mConnection);
 
         buttonPlay.setVisibility(View.VISIBLE);
@@ -194,7 +258,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onPause() {
         super.onPause();
-        //stopPlaying();
     }
 
     @Override
@@ -209,5 +272,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
         return true;
     }
+
+    private ServiceConnection mConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance
+            RadioStationService.LocalBinder binder = (RadioStationService.LocalBinder) service;
+            mService = binder.getService();
+            mBound = true;
+            imageWave.startAnimation(rotate);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            mBound = false;
+        }
+    };
 
 }

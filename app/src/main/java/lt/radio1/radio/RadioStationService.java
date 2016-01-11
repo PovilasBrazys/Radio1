@@ -74,7 +74,7 @@ public class RadioStationService extends Service {
     @Override
     public IBinder onBind(Intent intent) {
         Log.d("TAG", "Bind");
-        Toast.makeText(this, "service starting", Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, "service starting", Toast.LENGTH_SHORT).show();
 
         Message msg = mServiceHandler.obtainMessage();
         msg.arg1 = 1;
@@ -100,6 +100,7 @@ public class RadioStationService extends Service {
     private void stopPlaying() {
         if (player.isPlaying()) {
             player.stop();
+            player.reset();
             player.release();
         }
     }
