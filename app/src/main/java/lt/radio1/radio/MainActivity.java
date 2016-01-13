@@ -1,24 +1,18 @@
 package lt.radio1.radio;
 
-import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.graphics.Color;
-import android.graphics.Typeface;
 import android.media.AudioManager;
-import android.media.MediaPlayer;
 import android.os.Handler;
 import android.os.IBinder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
-import android.text.TextUtils;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
@@ -26,13 +20,9 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.SeekBar;
-import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.ViewFlipper;
-
-import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener {
 
@@ -47,14 +37,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private SeekBar mSeekBar;
     private static final int maxVolume = 100;
     private int playerVolume = 100;
-    private float volume;
+    private float volume = 1f;
     private Animation rotate;
     private Intent titleService;
     private final GestureDetector detector = new GestureDetector(new SwipeGestureDetector());
-
+    private Intent radioIntent;
 
     RadioStationService mService;
     boolean mBound = false;
+    boolean isMusicService = false;
 
     private MyBroadcastReceiver_Update myBroadcastReceiver_Update;
 
@@ -68,25 +59,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         initializeUIElements();
 
         myBroadcastReceiver_Update = new MyBroadcastReceiver_Update();
-
-        IntentFilter intentFilter_update = new IntentFilter(TitleService.ACTION_MyUpdate);
-        intentFilter_update.addCategory(Intent.CATEGORY_DEFAULT);
-        registerReceiver(myBroadcastReceiver_Update, intentFilter_update);
+        IntentFilter songTitleIntent = new IntentFilter(TitleService.ACTION_MyUpdate);
+        songTitleIntent.addCategory(Intent.CATEGORY_DEFAULT);
+        registerReceiver(myBroadcastReceiver_Update, songTitleIntent);
 
         titleService = new Intent(this, TitleService.class);
         startService(titleService);
+
     }
-
-    public class MyBroadcastReceiver_Update extends BroadcastReceiver {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String update = intent.getStringExtra(TitleService.EXTRA_KEY_UPDATE);
-            Log.d(TAG, "Update " + update);
-            songTitle.setText(update);
-        }
-    }
-
 
     private void initializeUIElements() {
 
@@ -105,8 +85,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         buttonVolumeDown.setOnLongClickListener(this);
 
         songTitle = (TextView) findViewById(R.id.song_title);
-        //songTitle.startAnimation(AnimationUtils.loadAnimation(this, R.anim.moving_text));
-
 
         imageWave = (ImageView) findViewById(R.id.wave_image);
         rotate = AnimationUtils.loadAnimation(this, R.anim.wobble);
@@ -128,7 +106,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 playerVolume = mSeekBar.getProgress() == 100 ? 99 : mSeekBar.getProgress();
                 volume = (float) (1 - (Math.log(maxVolume - playerVolume) / Math.log(maxVolume)));
-                mService.setPlayerVolume(volume);
+                if (mBound) {
+                    mService.setPlayerVolume(volume);
+                }
             }
 
             @Override
@@ -140,70 +120,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
 
-    }
-
-    private static final int SWIPE_MIN_DISTANCE = 120;
-    private static final int SWIPE_THRESHOLD_VELOCITY = 200;
-
-    class SwipeGestureDetector extends GestureDetector.SimpleOnGestureListener {
-
-        boolean isFlipping = true;
-        Handler handler = new Handler();
-        Runnable run1 = new Runnable() {
-            @Override
-            public void run() {
-                mViewFlipper.startFlipping();
-                mViewFlipper.showNext();
-                isFlipping = true;
-            }
-        };
-        Runnable run2 = new Runnable() {
-            @Override
-            public void run() {
-                mViewFlipper.startFlipping();
-                mViewFlipper.showPrevious();
-                isFlipping = true;
-            }
-        };
-
-        @Override
-        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-            try {
-                // right to left swipe
-                if (e1.getX() - e2.getX() > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
-                    mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_in_right));
-                    mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_out_left));
-                    mViewFlipper.showNext();
-                    if (isFlipping) {
-                        mViewFlipper.stopFlipping();
-                        handler.postDelayed(run1, 5000);
-                        isFlipping = false;
-                    } else {
-                        handler.removeCallbacks(run1);
-                        handler.postDelayed(run1, 5000);
-                    }
-                    return true;
-                } else if (e2.getX() - e1.getX() > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
-                    mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_in_left));
-                    mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_out_right));
-                    mViewFlipper.showPrevious();
-                    if (isFlipping) {
-                        mViewFlipper.stopFlipping();
-                        handler.postDelayed(run2, 5000);
-                        isFlipping = false;
-                    } else {
-                        handler.removeCallbacks(run2);
-                        handler.postDelayed(run2, 5000);
-                    }
-                    return true;
-                }
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            return false;
-        }
     }
 
     public void onClick(View v) {
@@ -229,35 +145,95 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    class SwipeGestureDetector extends GestureDetector.SimpleOnGestureListener {
+
+        private static final int SWIPE_MIN_DISTANCE = 120;
+        private static final int SWIPE_THRESHOLD_VELOCITY = 200;
+
+        boolean isFlipping = true;
+        Handler handler = new Handler();
+        boolean swipeToRight = false;
+
+        Runnable run = new Runnable() {
+            @Override
+            public void run() {
+                if (swipeToRight) {
+                    mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_in_right));
+                    mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_out_left));
+                } else {
+                    mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_in_left));
+                    mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_out_right));
+                }
+                mViewFlipper.startFlipping();
+                mViewFlipper.showNext();
+                isFlipping = true;
+            }
+        };
+
+        @Override
+        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+            try {
+                if (e1.getX() - e2.getX() > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
+                    return swipeAnim(false);
+                } else if (e2.getX() - e1.getX() > SWIPE_MIN_DISTANCE && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
+                    return swipeAnim(true);
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return false;
+        }
+
+        private boolean swipeAnim(boolean swipeToRight) {
+            if (swipeToRight) {
+                mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_in_left));
+                mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_out_right));
+                mViewFlipper.showPrevious();
+            } else {
+                mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_in_right));
+                mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_out_left));
+                mViewFlipper.showNext();
+            }
+            this.swipeToRight = swipeToRight;
+            if (isFlipping) {
+                mViewFlipper.stopFlipping();
+                handler.postDelayed(run, 5000);
+                isFlipping = false;
+            } else {
+                handler.removeCallbacks(run);
+                handler.postDelayed(run, 5000);
+            }
+            return true;
+        }
+
+    }
+
+
+    public class MyBroadcastReceiver_Update extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String update = intent.getStringExtra(TitleService.EXTRA_KEY_UPDATE);
+            Log.d(TAG, "Update " + update);
+            songTitle.setText(update);
+        }
+    }
+
     private void startPlaying() {
         buttonStopPlay.setVisibility(View.VISIBLE);
         buttonPlay.setVisibility(View.INVISIBLE);
-
-        Intent intent = new Intent(this, RadioStationService.class);
-        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
-        //volume = (float) (1 - (Math.log(maxVolume - playerVolume) / Math.log(maxVolume)));
-
-
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        unregisterReceiver(myBroadcastReceiver_Update);
+        radioIntent = new Intent(this, RadioStationService.class);
+        bindService(radioIntent, mConnection, Context.BIND_AUTO_CREATE);
+        imageWave.startAnimation(rotate);
+        isMusicService = true;
     }
 
     private void stopPlaying() {
-        unbindService(mConnection);
-
         buttonPlay.setVisibility(View.VISIBLE);
         buttonStopPlay.setVisibility(View.INVISIBLE);
-
         imageWave.setAnimation(null);
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
+        unbindService(mConnection);
+        isMusicService = false;
     }
 
     @Override
@@ -278,11 +254,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onServiceConnected(ComponentName className,
                                        IBinder service) {
-            // We've bound to LocalService, cast the IBinder and get LocalService instance
             RadioStationService.LocalBinder binder = (RadioStationService.LocalBinder) service;
             mService = binder.getService();
             mBound = true;
-            imageWave.startAnimation(rotate);
+            mSeekBar.setProgress(playerVolume);
         }
 
         @Override
@@ -290,5 +265,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mBound = false;
         }
     };
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(myBroadcastReceiver_Update);
+        stopService(titleService);
+        if (isMusicService) {
+            unbindService(mConnection);
+            stopService(radioIntent);
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
 
 }

@@ -27,11 +27,11 @@ public class TitleService extends IntentService {
 
     private static final String TAG = TitleService.class.getName();
 
-    public static final String ACTION_MyIntentService = "lt.radio1.radio.RESPONSE";
     public static final String ACTION_MyUpdate = "lt.radio1.radio.UPDATE";
     public static final String EXTRA_KEY_UPDATE = "EXTRA_UPDATE";
 
     private String title;
+    boolean onBreak;
 
     public TitleService() {
         super("TitleService");
@@ -44,14 +44,20 @@ public class TitleService extends IntentService {
         while (System.currentTimeMillis() < endTime) {
             synchronized (this) {
                 try {
-
                     getTitle();
                     wait(endTime - System.currentTimeMillis());
                     endTime = System.currentTimeMillis() + 5000;
+                    if (onBreak) break;
                 } catch (Exception e) {
                 }
             }
         }
+    }
+
+    @Override
+    public void onDestroy() {
+        onBreak = true;
+        super.onDestroy();
     }
 
     public void getTitle() {

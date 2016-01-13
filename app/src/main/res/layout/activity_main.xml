@@ -50,6 +50,7 @@
         android:focusableInTouchMode="true"
         android:gravity="center"
         android:background="#552c6887"
+        android:fontFamily="sans-serif-light"
         android:marqueeRepeatLimit="marquee_forever"
         android:requiresFadingEdge="horizontal"
         android:scrollHorizontally="true"
