@@ -6,46 +6,55 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.os.Handler;
 import android.os.IBinder;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.NavigationView;
+import android.support.design.widget.Snackbar;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.GestureDetector;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.ViewFlipper;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener, NavigationView.OnNavigationItemSelectedListener {
 
     private static final String TAG = MainActivity.class.getName();
 
     private ImageButton buttonPlay, buttonStopPlay;
     private ImageButton buttonVolumeUp, buttonVolumeDown;
     private ViewFlipper mViewFlipper;
-    private ImageView imageWave;
+    private ImageView imageWave, iconImage;
     private TextView songTitle;
-    private Toolbar mToolbar;
-    private SeekBar mSeekBar;
-    private static final int maxVolume = 100;
-    private int playerVolume = 100;
-    private float volume = 1f;
+    private IntentFilter songTitleIntent;
+    private SeekBar mVolumeSeekBar;
     private Animation rotate;
     private Intent titleService;
     private final GestureDetector detector = new GestureDetector(new SwipeGestureDetector());
-    private Intent radioIntent;
+    private Intent intent;
 
-    RadioStationService mService;
-    boolean mBound = false;
-    boolean isMusicService = false;
+    private RadioStationService mService;
+
+    private boolean isPlaying = false;
+    private boolean mBound = false;
+    private float volume = 1f;
 
     private MyBroadcastReceiver_Update myBroadcastReceiver_Update;
 
@@ -53,35 +62,44 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
         initializeUIElements();
 
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(
+                this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
+        drawer.setDrawerListener(toggle);
+        toggle.syncState();
+        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        navigationView.setNavigationItemSelectedListener(this);
+
         myBroadcastReceiver_Update = new MyBroadcastReceiver_Update();
-        IntentFilter songTitleIntent = new IntentFilter(TitleService.ACTION_MyUpdate);
+        songTitleIntent = new IntentFilter(TitleService.ACTION_MyUpdate);
         songTitleIntent.addCategory(Intent.CATEGORY_DEFAULT);
         registerReceiver(myBroadcastReceiver_Update, songTitleIntent);
-
         titleService = new Intent(this, TitleService.class);
         startService(titleService);
+
+
+        intent = new Intent(this, RadioStationService.class);
 
     }
 
     private void initializeUIElements() {
 
         buttonPlay = (ImageButton) findViewById(R.id.m_start_play);
+        buttonStopPlay = (ImageButton) findViewById(R.id.m_stop_play);
+        buttonStopPlay.setOnClickListener(this);
         buttonPlay.setOnClickListener(this);
 
-        buttonStopPlay = (ImageButton) findViewById(R.id.m_stop_play);
-        buttonStopPlay.setVisibility(View.INVISIBLE);
-        buttonStopPlay.setOnClickListener(this);
-
         buttonVolumeUp = (ImageButton) findViewById(R.id.volume_up);
-        buttonVolumeUp.setOnClickListener(this);
-        buttonVolumeUp.setOnLongClickListener(this);
         buttonVolumeDown = (ImageButton) findViewById(R.id.volume_down);
+        buttonVolumeUp.setOnClickListener(this);
         buttonVolumeDown.setOnClickListener(this);
+        buttonVolumeUp.setOnLongClickListener(this);
         buttonVolumeDown.setOnLongClickListener(this);
 
         songTitle = (TextView) findViewById(R.id.song_title);
@@ -98,16 +116,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         });
 
-        mSeekBar = (SeekBar) findViewById(R.id.seekBar);
-        mSeekBar.setMax(maxVolume);
-        mSeekBar.setProgress(playerVolume);
-        mSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        mVolumeSeekBar = (SeekBar) findViewById(R.id.seekBar);
+        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        volume = sharedPref.getFloat("volume", 1f);
+        isPlaying = sharedPref.getBoolean("isPlaying", false);
+        if (isPlaying) {
+            buttonPlay.setVisibility(View.INVISIBLE);
+        } else {
+            buttonStopPlay.setVisibility(View.INVISIBLE);
+        }
+        mVolumeSeekBar.setProgress(100);
+        mVolumeSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                playerVolume = mSeekBar.getProgress() == 100 ? 99 : mSeekBar.getProgress();
-                volume = (float) (1 - (Math.log(maxVolume - playerVolume) / Math.log(maxVolume)));
+                volume = (float) (progress == 100 ? 99 : progress) / (float) 100;
+                //volume = (float) (1 - (Math.log(1f - volume) / Math.log(1f)));
                 if (mBound) {
-                    mService.setPlayerVolume(volume);
+                    mService.setMediaPlayerVol(volume);
                 }
             }
 
@@ -122,27 +147,169 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     }
 
+    @Override
+    public void onBackPressed() {
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        if (drawer.isDrawerOpen(GravityCompat.START)) {
+            drawer.closeDrawer(GravityCompat.START);
+        } else {
+            super.onBackPressed();
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int id = item.getItemId();
+
+        if (id == R.id.action_settings) {
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @SuppressWarnings("StatementWithEmptyBody")
+    @Override
+    public boolean onNavigationItemSelected(MenuItem item) {
+        // Handle navigation view item clicks here.
+        int id = item.getItemId();
+
+        if (id == R.id.nav_camera) {
+            // Handle the camera action
+        } else if (id == R.id.nav_gallery) {
+
+        } else if (id == R.id.nav_slideshow) {
+
+        } else if (id == R.id.nav_manage) {
+
+        } else if (id == R.id.nav_share) {
+
+        } else if (id == R.id.nav_send) {
+
+        }
+
+        DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+        drawer.closeDrawer(GravityCompat.START);
+        return true;
+    }
+
     public void onClick(View v) {
         switch (v.getId()) {
-            case R.id.m_stop_play:
-                stopPlaying();
-                break;
             case R.id.m_start_play:
-                startPlaying();
+                if (!isPlaying) {
+                    buttonStopPlay.setVisibility(View.VISIBLE);
+                    buttonPlay.setVisibility(View.INVISIBLE);
+                    imageWave.startAnimation(rotate);
+                    intent.putExtra("soundVol", volume);
+                    startService(intent);
+                    bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+                    isPlaying = true;
+                }
+                break;
+            case R.id.m_stop_play:
+                if (isPlaying) {
+                    buttonPlay.setVisibility(View.VISIBLE);
+                    buttonStopPlay.setVisibility(View.INVISIBLE);
+                    imageWave.setAnimation(null);
+                    if (mBound) {
+                        unbindService(mConnection);
+                        mBound = false;
+                    }
+                    stopService(intent);
+                    isPlaying = false;
+                }
                 break;
             case R.id.volume_up:
-                if (playerVolume != 100) {
-                    playerVolume += 10 - (mSeekBar.getProgress() % 10);
-                    mSeekBar.setProgress(playerVolume);
+                if (volume != 0.99f) {
+                    volume += (10 - (mVolumeSeekBar.getProgress() % 10)) / (float)100;
+                    Log.e("TAG", "up " + volume);
+                    mVolumeSeekBar.setProgress((int) (volume * 100));
                 }
                 break;
             case R.id.volume_down:
-                if (playerVolume != 0) {
-                    playerVolume -= mSeekBar.getProgress() % 10 == 0 ? 10 : mSeekBar.getProgress() % 10;
-                    mSeekBar.setProgress(playerVolume);
+                if (volume != 0f) {
+                    volume -= (mVolumeSeekBar.getProgress() % 10 == 0 ? 10 : mVolumeSeekBar.getProgress() % 10) / (float)100;
+                    Log.e("TAG", "DOWN " + volume);
+                    mVolumeSeekBar.setProgress((int) (volume * 100));
                 }
                 break;
         }
+    }
+
+    public class MyBroadcastReceiver_Update extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String update = intent.getStringExtra(TitleService.EXTRA_KEY_UPDATE);
+            Log.d(TAG, "Update " + update);
+            songTitle.setText(update);
+        }
+    }
+
+
+    @Override
+    public boolean onLongClick(View v) {
+        switch (v.getId()) {
+            case R.id.volume_up:
+                mVolumeSeekBar.setProgress(100);
+                break;
+            case R.id.volume_down:
+                mVolumeSeekBar.setProgress(0);
+                break;
+        }
+        return true;
+    }
+
+    private ServiceConnection mConnection = new ServiceConnection() {
+
+        @Override
+        public void onServiceConnected(ComponentName className,
+                                       IBinder service) {
+            RadioStationService.LocalBinder binder = (RadioStationService.LocalBinder) service;
+            mService = binder.getService();
+            mBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            mBound = false;
+        }
+    };
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (isPlaying) {
+            bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+        }
+        mVolumeSeekBar.setProgress((int) (volume * 100));
+        mViewFlipper.startFlipping();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mViewFlipper.stopFlipping();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (mBound) {
+            unbindService(mConnection);
+        }
+        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putBoolean("isPlaying", isPlaying);
+        editor.putFloat("volume", volume);
+        editor.commit();
+        stopService(titleService);
+        unregisterReceiver(myBroadcastReceiver_Update);
     }
 
     class SwipeGestureDetector extends GestureDetector.SimpleOnGestureListener {
@@ -154,7 +321,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Handler handler = new Handler();
         boolean swipeToRight = false;
 
-        Runnable run = new Runnable() {
+        public Runnable run = new Runnable() {
             @Override
             public void run() {
                 if (swipeToRight) {
@@ -207,84 +374,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             return true;
         }
 
-    }
-
-
-    public class MyBroadcastReceiver_Update extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String update = intent.getStringExtra(TitleService.EXTRA_KEY_UPDATE);
-            Log.d(TAG, "Update " + update);
-            songTitle.setText(update);
-        }
-    }
-
-    private void startPlaying() {
-        buttonStopPlay.setVisibility(View.VISIBLE);
-        buttonPlay.setVisibility(View.INVISIBLE);
-        radioIntent = new Intent(this, RadioStationService.class);
-        bindService(radioIntent, mConnection, Context.BIND_AUTO_CREATE);
-        imageWave.startAnimation(rotate);
-        isMusicService = true;
-    }
-
-    private void stopPlaying() {
-        buttonPlay.setVisibility(View.VISIBLE);
-        buttonStopPlay.setVisibility(View.INVISIBLE);
-        imageWave.setAnimation(null);
-        unbindService(mConnection);
-        isMusicService = false;
-    }
-
-    @Override
-    public boolean onLongClick(View v) {
-        switch (v.getId()) {
-            case R.id.volume_up:
-                mSeekBar.setProgress(100);
-                break;
-            case R.id.volume_down:
-                mSeekBar.setProgress(0);
-                break;
-        }
-        return true;
-    }
-
-    private ServiceConnection mConnection = new ServiceConnection() {
-
-        @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
-            RadioStationService.LocalBinder binder = (RadioStationService.LocalBinder) service;
-            mService = binder.getService();
-            mBound = true;
-            mSeekBar.setProgress(playerVolume);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName arg0) {
-            mBound = false;
-        }
-    };
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        unregisterReceiver(myBroadcastReceiver_Update);
-        stopService(titleService);
-        if (isMusicService) {
-            unbindService(mConnection);
-            stopService(radioIntent);
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
     }
 
 }

@@ -79,7 +79,6 @@ public class TitleService extends IntentService {
     private class DownloadWebpageTask extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... urls) {
-
             try {
                 return downloadUrl(urls[0]);
             } catch (IOException e) {
@@ -89,6 +88,14 @@ public class TitleService extends IntentService {
 
         @Override
         protected void onPostExecute(String result) {
+            if(result.equals("")) {
+                title = result;
+                Intent intentUpdate = new Intent();
+                intentUpdate.setAction(ACTION_MyUpdate);
+                intentUpdate.addCategory(Intent.CATEGORY_DEFAULT);
+                intentUpdate.putExtra(EXTRA_KEY_UPDATE, "Sorry, we are not streaming music right now");
+                sendBroadcast(intentUpdate);
+            }
             if (!result.equals(title)) {
                 title = result;
                 Intent intentUpdate = new Intent();
@@ -97,27 +104,25 @@ public class TitleService extends IntentService {
                 intentUpdate.putExtra(EXTRA_KEY_UPDATE, result);
                 sendBroadcast(intentUpdate);
             }
+
         }
     }
 
     private String downloadUrl(String myurl) throws IOException {
         InputStream is = null;
-
         try {
             URL url = new URL(myurl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setReadTimeout(10000 /* milliseconds */);
-            conn.setConnectTimeout(15000 /* milliseconds */);
+            conn.setReadTimeout(10000);
+            conn.setConnectTimeout(15000);
             conn.setRequestMethod("GET");
             conn.setDoInput(true);
             conn.connect();
             int response = conn.getResponseCode();
             Log.d(TAG, "The response is: " + response);
             is = conn.getInputStream();
-
             String contentAsString = readIt(is);
             return contentAsString;
-
         } finally {
             if (is != null) {
                 is.close();
@@ -133,7 +138,6 @@ public class TitleService extends IntentService {
             out.append(line);
         }
         reader.close();
-
         return out.toString();
     }
 
