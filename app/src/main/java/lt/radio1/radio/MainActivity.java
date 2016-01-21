@@ -7,12 +7,19 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.res.Resources;
+import android.graphics.Canvas;
+import android.graphics.ColorFilter;
+import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
-import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.NavigationView;
-import android.support.design.widget.Snackbar;
 import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
@@ -29,10 +36,15 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 import android.widget.ViewFlipper;
+
+import java.util.List;
+
+import static lt.radio1.radio.RadioStationService.ACTION_MyUpdate;
+import static lt.radio1.radio.RadioStationService.EXTRA_KEY_UPDATE;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener, NavigationView.OnNavigationItemSelectedListener {
 
@@ -41,12 +53,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private ImageButton buttonPlay, buttonStopPlay;
     private ImageButton buttonVolumeUp, buttonVolumeDown;
     private ViewFlipper mViewFlipper;
-    private ImageView imageWave, iconImage;
+    private ImageView imageWave;
     private TextView songTitle;
     private IntentFilter songTitleIntent;
     private SeekBar mVolumeSeekBar;
-    private Animation rotate;
-    private Intent titleService;
+    //private Animation rotate;
     private final GestureDetector detector = new GestureDetector(new SwipeGestureDetector());
     private Intent intent;
 
@@ -56,6 +67,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private boolean mBound = false;
     private float volume = 1f;
 
+    int[] ints = new int[] {R.drawable.slide01, R.drawable.slide02, R.drawable.slide03};
     private MyBroadcastReceiver_Update myBroadcastReceiver_Update;
 
     @Override
@@ -77,13 +89,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         navigationView.setNavigationItemSelectedListener(this);
 
         myBroadcastReceiver_Update = new MyBroadcastReceiver_Update();
-        songTitleIntent = new IntentFilter(TitleService.ACTION_MyUpdate);
+        songTitleIntent = new IntentFilter(ACTION_MyUpdate);
         songTitleIntent.addCategory(Intent.CATEGORY_DEFAULT);
-        registerReceiver(myBroadcastReceiver_Update, songTitleIntent);
-        titleService = new Intent(this, TitleService.class);
-        startService(titleService);
-
-
         intent = new Intent(this, RadioStationService.class);
 
     }
@@ -105,9 +112,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         songTitle = (TextView) findViewById(R.id.song_title);
 
         imageWave = (ImageView) findViewById(R.id.wave_image);
-        rotate = AnimationUtils.loadAnimation(this, R.anim.wobble);
+        //rotate = AnimationUtils.loadAnimation(this, R.anim.wobble);
 
         mViewFlipper = (ViewFlipper) findViewById(R.id.view_flipper);
+        mViewFlipper.setFlipInterval(5000);
+        mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_in_right));
+        mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_out_left));
+        ImageView imageView;
+        Resources res = getResources();
+        for (int i = 0; i < 3; i++){
+            imageView = new ImageView(this);
+            imageView.setImageDrawable(res.getDrawable(ints[i]));
+            mViewFlipper.addView(imageView);
+        }
         mViewFlipper.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(final View view, final MotionEvent event) {
@@ -117,20 +134,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         });
 
         mVolumeSeekBar = (SeekBar) findViewById(R.id.seekBar);
-        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
-        volume = sharedPref.getFloat("volume", 1f);
-        isPlaying = sharedPref.getBoolean("isPlaying", false);
-        if (isPlaying) {
-            buttonPlay.setVisibility(View.INVISIBLE);
-        } else {
-            buttonStopPlay.setVisibility(View.INVISIBLE);
-        }
-        mVolumeSeekBar.setProgress(100);
         mVolumeSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
                 volume = (float) (progress == 100 ? 99 : progress) / (float) 100;
-                //volume = (float) (1 - (Math.log(1f - volume) / Math.log(1f)));
                 if (mBound) {
                     mService.setMediaPlayerVol(volume);
                 }
@@ -157,9 +164,127 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    public void onClick(View v) {
+        switch (v.getId()) {
+            case R.id.m_start_play:
+                if (isNetworkAvailable()) {
+                    if (!isPlaying) {
+                        buttonStopPlay.setVisibility(View.VISIBLE);
+                        buttonPlay.setVisibility(View.INVISIBLE);
+                        //imageWave.startAnimation(rotate);
+                        intent.putExtra("soundVol", volume);
+                        startService(intent);
+                        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+                        isPlaying = true;
+                    }
+                } else {
+                    Toast.makeText(this, "Connect to Internet", Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case R.id.m_stop_play:
+                if (isPlaying) {
+                    buttonPlay.setVisibility(View.VISIBLE);
+                    buttonStopPlay.setVisibility(View.INVISIBLE);
+                    imageWave.setAnimation(null);
+                    if (mBound) {
+                        unbindService(mConnection);
+                        mBound = false;
+                    }
+                    stopService(intent);
+                    isPlaying = false;
+                    SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
+                    editor.putBoolean("isPlaying", isPlaying);
+                    editor.putFloat("volume", volume);
+                    editor.commit();
+                }
+                break;
+            case R.id.volume_up:
+                if (volume != 0.99f) {
+                    volume += (10 - (mVolumeSeekBar.getProgress() % 10)) / (float) 100;
+                    Log.e("TAG", "up " + volume);
+                    mVolumeSeekBar.setProgress((int) (volume * 100));
+                }
+                break;
+            case R.id.volume_down:
+                if (volume != 0f) {
+                    volume -= (mVolumeSeekBar.getProgress() % 10 == 0 ? 10 : mVolumeSeekBar.getProgress() % 10) / (float) 100;
+                    Log.e("TAG", "DOWN " + volume);
+                    mVolumeSeekBar.setProgress((int) (volume * 100));
+                }
+                break;
+        }
+    }
+
+    public class MyBroadcastReceiver_Update extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String update = intent.getStringExtra(EXTRA_KEY_UPDATE);
+            Log.d(TAG, "Update " + update);
+            songTitle.setText(update);
+        }
+    }
+
+
+    @Override
+    public boolean onLongClick(View v) {
+        switch (v.getId()) {
+            case R.id.volume_up:
+                mVolumeSeekBar.setProgress(100);
+                break;
+            case R.id.volume_down:
+                mVolumeSeekBar.setProgress(0);
+                break;
+        }
+        return true;
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        //new DownloadWebpageTask(this);
+        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        volume = sharedPref.getFloat("volume", 1f);
+        isPlaying = sharedPref.getBoolean("isPlaying", false);
+        mVolumeSeekBar.setProgress(100);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        registerReceiver(myBroadcastReceiver_Update, songTitleIntent);
+        if (isPlaying) {
+            //imageWave.startAnimation(rotate);
+            buttonPlay.setVisibility(View.INVISIBLE);
+            bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+        } else {
+            buttonStopPlay.setVisibility(View.INVISIBLE);
+        }
+        mVolumeSeekBar.setProgress((int) (volume * 100));
+        mViewFlipper.startFlipping();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        mViewFlipper.stopFlipping();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(myBroadcastReceiver_Update);
+        if (mBound) {
+            unbindService(mConnection);
+        }
+        SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
+        editor.putBoolean("isPlaying", isPlaying);
+        editor.putFloat("volume", volume);
+        editor.commit();
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main, menu);
+        // getMenuInflater().inflate(R.menu.main, menu);
         return true;
     }
 
@@ -180,89 +305,79 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        if (id == R.id.nav_camera) {
-            // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
-
-        } else if (id == R.id.nav_slideshow) {
-
-        } else if (id == R.id.nav_manage) {
-
+        if (id == R.id.nav_facebook) {
+            launchFacebook();
+        } else if (id == R.id.nav_twitter) {
+            startTwitter();
+        } else if (id == R.id.nav_pinterest) {
+            try {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("pinterest://www.pinterest.com/radio1lithuania")));
+            } catch (Exception e) {
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.pinterest.com/radio1lithuania")));
+            }
+        } else if (id == R.id.nav_linkedin) {
+            Intent intent = null;
+            try {
+                getPackageManager().getPackageInfo("com.linkedin.android", 0);
+                intent = new Intent(Intent.ACTION_VIEW, Uri.parse("linkedin://profile/in/radio1-lithuania-9a5618111"));
+            } catch (Exception e) {
+                intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.linkedin.com/in/radio1-lithuania-9a5618111"));
+            } finally {
+                startActivity(intent);
+            }
+        } else if (id == R.id.nav_contact) {
+            Intent intent = new Intent(this, ContactsActivity.class);
+            startActivity(intent);
+        } else if (id == R.id.nav_menu_radio1_website) {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.radio1.lt/"));
+            startActivity(intent);
         } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
-
+            Intent sendIntent = new Intent();
+            sendIntent.setAction(Intent.ACTION_SEND);
+            sendIntent.putExtra(Intent.EXTRA_TEXT, "http://www.radio1.lt/");
+            sendIntent.setType("text/plain");
+            startActivity(sendIntent);
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
-        return true;
+        return false;
     }
 
-    public void onClick(View v) {
-        switch (v.getId()) {
-            case R.id.m_start_play:
-                if (!isPlaying) {
-                    buttonStopPlay.setVisibility(View.VISIBLE);
-                    buttonPlay.setVisibility(View.INVISIBLE);
-                    imageWave.startAnimation(rotate);
-                    intent.putExtra("soundVol", volume);
-                    startService(intent);
-                    bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
-                    isPlaying = true;
-                }
-                break;
-            case R.id.m_stop_play:
-                if (isPlaying) {
-                    buttonPlay.setVisibility(View.VISIBLE);
-                    buttonStopPlay.setVisibility(View.INVISIBLE);
-                    imageWave.setAnimation(null);
-                    if (mBound) {
-                        unbindService(mConnection);
-                        mBound = false;
-                    }
-                    stopService(intent);
-                    isPlaying = false;
-                }
-                break;
-            case R.id.volume_up:
-                if (volume != 0.99f) {
-                    volume += (10 - (mVolumeSeekBar.getProgress() % 10)) / (float)100;
-                    Log.e("TAG", "up " + volume);
-                    mVolumeSeekBar.setProgress((int) (volume * 100));
-                }
-                break;
-            case R.id.volume_down:
-                if (volume != 0f) {
-                    volume -= (mVolumeSeekBar.getProgress() % 10 == 0 ? 10 : mVolumeSeekBar.getProgress() % 10) / (float)100;
-                    Log.e("TAG", "DOWN " + volume);
-                    mVolumeSeekBar.setProgress((int) (volume * 100));
-                }
-                break;
+    public final void launchFacebook() {
+        final String urlFb = "fb://page/" + "1607910642807572";
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setData(Uri.parse(urlFb));
+
+        final PackageManager packageManager = getPackageManager();
+        List<ResolveInfo> list =
+                packageManager.queryIntentActivities(intent,
+                        PackageManager.MATCH_DEFAULT_ONLY);
+        if (list.size() == 0) {
+            final String urlBrowser = "https://www.facebook.com/radiohit1";
+            intent.setData(Uri.parse(urlBrowser));
         }
+
+        startActivity(intent);
     }
 
-    public class MyBroadcastReceiver_Update extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String update = intent.getStringExtra(TitleService.EXTRA_KEY_UPDATE);
-            Log.d(TAG, "Update " + update);
-            songTitle.setText(update);
+    public void startTwitter() {
+        Intent intent = null;
+        try {
+            this.getPackageManager().getPackageInfo("com.twitter.android", 0);
+            intent = new Intent(Intent.ACTION_VIEW, Uri.parse("twitter://user?user_id=4654618720"));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        } catch (Exception e) {
+            intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://twitter.com/Radio1Lithuania"));
         }
+        this.startActivity(intent);
     }
 
-
-    @Override
-    public boolean onLongClick(View v) {
-        switch (v.getId()) {
-            case R.id.volume_up:
-                mVolumeSeekBar.setProgress(100);
-                break;
-            case R.id.volume_down:
-                mVolumeSeekBar.setProgress(0);
-                break;
-        }
-        return true;
+    private boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager
+                = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected();
     }
 
     private ServiceConnection mConnection = new ServiceConnection() {
@@ -280,37 +395,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             mBound = false;
         }
     };
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (isPlaying) {
-            bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
-        }
-        mVolumeSeekBar.setProgress((int) (volume * 100));
-        mViewFlipper.startFlipping();
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        mViewFlipper.stopFlipping();
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (mBound) {
-            unbindService(mConnection);
-        }
-        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPref.edit();
-        editor.putBoolean("isPlaying", isPlaying);
-        editor.putFloat("volume", volume);
-        editor.commit();
-        stopService(titleService);
-        unregisterReceiver(myBroadcastReceiver_Update);
-    }
 
     class SwipeGestureDetector extends GestureDetector.SimpleOnGestureListener {
 

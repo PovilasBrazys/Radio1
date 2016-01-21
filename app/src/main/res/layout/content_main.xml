@@ -15,31 +15,10 @@
         android:id="@+id/view_flipper"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:flipInterval="5000"
-        android:inAnimation="@anim/slide_in_right"
-        android:outAnimation="@anim/slide_out_left">
-
-        <ImageView
-            android:id="@+id/image1"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:src="@drawable/slide02" />
-
-        <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:src="@drawable/slide03" />
-
-        <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:src="@drawable/slide01" />
+        android:layout_weight="1">
 
     </ViewFlipper>
+
 
     <TextView
         android:id="@+id/song_title"
@@ -56,7 +35,7 @@
         android:requiresFadingEdge="horizontal"
         android:scrollHorizontally="true"
         android:singleLine="true"
-        android:text="No network connection available."
+        android:text="Play To Start"
         android:textColor="@color/colorAccent"
         android:textSize="18sp" />
 
@@ -78,16 +57,14 @@
                 <ImageView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_margin="5dp"
                     android:layout_weight=".5"
-                    android:src="@drawable/mic2" />
+                    android:src="@drawable/ic_mic2" />
 
                 <ImageView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_margin="5dp"
                     android:layout_weight=".5"
-                    android:src="@drawable/mic1" />
+                    android:src="@drawable/ic_mic1" />
 
             </LinearLayout>
         </RelativeLayout>
@@ -116,20 +93,20 @@
                     android:src="@drawable/wave1" />
 
                 <ImageButton
-                    android:id="@+id/m_stop_play"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerInParent="true"
-                    android:background="@color/colortTransparent"
-                    android:src="@drawable/ic_pause_white_48dp" />
-
-                <ImageButton
                     android:id="@+id/m_start_play"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_centerInParent="true"
                     android:background="@color/colortTransparent"
                     android:src="@drawable/ic_play_arrow_white_48dp" />
+
+                <ImageButton
+                    android:id="@+id/m_stop_play"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerInParent="true"
+                    android:background="@color/colortTransparent"
+                    android:src="@drawable/ic_pause_white_48dp" />
 
             </RelativeLayout>
 
@@ -146,7 +123,6 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@color/colortTransparent"
-                    android:padding="3dp"
                     android:src="@drawable/ic_volume_down_white_48dp" />
 
                 <SeekBar
@@ -162,7 +138,6 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@color/colortTransparent"
-                    android:padding="3dp"
                     android:src="@drawable/ic_volume_up_white_48dp" />
 
             </LinearLayout>
