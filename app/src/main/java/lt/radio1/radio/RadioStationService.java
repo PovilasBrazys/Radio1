@@ -38,12 +38,10 @@ public class RadioStationService extends Service implements AsyncResponse {
 
         initializeMediaPlayer();
         mBuilder = new NotificationCompat.Builder(this)
-                .setSmallIcon(R.drawable.ic_status_bar)
+                .setSmallIcon(R.drawable.ic_stat_logo)
                 .setContentTitle("Radio 1")
                 .setContentText("musuique non stop")
-                .setVisibility(Notification.VISIBILITY_PUBLIC);
-        /*.addAction(R.drawable.ic_pause_white_48dp, "stop", null)*/
-        Intent notifyIntent =
+                .setVisibility(Notification.VISIBILITY_PUBLIC);        Intent notifyIntent =
                 new Intent(this, MainActivity.class);
 
         PendingIntent notifyPendingIntent =
