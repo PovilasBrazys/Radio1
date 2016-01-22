@@ -10,9 +10,6 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
-import android.graphics.Canvas;
-import android.graphics.ColorFilter;
-import android.graphics.drawable.Drawable;
 import android.media.AudioManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -26,13 +23,11 @@ import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.GestureDetector;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -47,8 +42,6 @@ import static lt.radio1.radio.RadioStationService.ACTION_MyUpdate;
 import static lt.radio1.radio.RadioStationService.EXTRA_KEY_UPDATE;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener, NavigationView.OnNavigationItemSelectedListener {
-
-    private static final String TAG = MainActivity.class.getName();
 
     private ImageButton buttonPlay, buttonStopPlay;
     private ImageButton buttonVolumeUp, buttonVolumeDown;
@@ -201,14 +194,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             case R.id.volume_up:
                 if (volume != 0.99f) {
                     volume += (10 - (mVolumeSeekBar.getProgress() % 10)) / (float) 100;
-                    Log.e("TAG", "up " + volume);
                     mVolumeSeekBar.setProgress((int) (volume * 100));
                 }
                 break;
             case R.id.volume_down:
                 if (volume != 0f) {
                     volume -= (mVolumeSeekBar.getProgress() % 10 == 0 ? 10 : mVolumeSeekBar.getProgress() % 10) / (float) 100;
-                    Log.e("TAG", "DOWN " + volume);
                     mVolumeSeekBar.setProgress((int) (volume * 100));
                 }
                 break;
@@ -219,7 +210,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         @Override
         public void onReceive(Context context, Intent intent) {
             String update = intent.getStringExtra(EXTRA_KEY_UPDATE);
-            Log.d(TAG, "Update " + update);
             songTitle.setText(update);
         }
     }
@@ -241,7 +231,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onStart() {
         super.onStart();
-        //new DownloadWebpageTask(this);
+        new DownloadWebpageTask();
         SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
         volume = sharedPref.getFloat("volume", 1f);
         isPlaying = sharedPref.getBoolean("isPlaying", false);
@@ -291,11 +281,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
-
         if (id == R.id.action_settings) {
             return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 

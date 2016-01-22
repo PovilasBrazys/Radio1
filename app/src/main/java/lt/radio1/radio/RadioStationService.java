@@ -7,9 +7,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
-import android.media.session.MediaController;
-import android.media.session.MediaSession;
-import android.media.session.MediaSessionManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
@@ -18,15 +15,11 @@ import android.os.PowerManager;
 import android.os.Binder;
 import android.os.IBinder;
 import android.support.v4.app.NotificationCompat;
-import android.util.Log;
-
 import java.io.IOException;
 
 public class RadioStationService extends Service implements AsyncResponse {
 
-    private final String tag = getClass().getName();
     private final IBinder mBinder = new LocalBinder();
-
     private WifiManager.WifiLock wifiLock;
     private NotificationCompat.Builder mBuilder;
 
@@ -39,15 +32,13 @@ public class RadioStationService extends Service implements AsyncResponse {
 
     @Override
     public void onCreate() {
-        Log.d(tag, "onCreate");
-
         wifiLock = ((WifiManager) getSystemService(Context.WIFI_SERVICE))
                 .createWifiLock(WifiManager.WIFI_MODE_FULL, "mylock");
         wifiLock.acquire();
 
         initializeMediaPlayer();
         mBuilder = new NotificationCompat.Builder(this)
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.ic_status_bar)
                 .setContentTitle("Radio 1")
                 .setContentText("musuique non stop")
                 .setVisibility(Notification.VISIBILITY_PUBLIC);
@@ -71,17 +62,14 @@ public class RadioStationService extends Service implements AsyncResponse {
     public Runnable run = new Runnable() {
         @Override
         public void run() {
-            Log.d(tag, "run");
             getTitle();
             handler.removeCallbacks(run);
             handler.postDelayed(run, 5000);
-            Log.d(tag, "run1");
         }
     };
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(tag, "onStartCommand");
         float vol = intent.getExtras().getFloat("soundVol");
         mMediaPlayer.setVolume(vol, vol);
         mMediaPlayer.prepareAsync();
@@ -100,7 +88,6 @@ public class RadioStationService extends Service implements AsyncResponse {
         mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
         try {
             mMediaPlayer.setDataSource("http://95.154.254.83:5394/");
-
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
         } catch (IllegalStateException e) {
@@ -113,14 +100,12 @@ public class RadioStationService extends Service implements AsyncResponse {
 
     @Override
     public IBinder onBind(Intent intent) {
-        Log.d(tag, "onBind");
         handler.postDelayed(run, 0);
         return mBinder;
     }
 
     @Override
     public boolean onUnbind(Intent intent) {
-        Log.d(tag, "onUnbind");
         Intent intentUpdate = new Intent();
         intentUpdate.setAction(ACTION_MyUpdate);
         intentUpdate.addCategory(Intent.CATEGORY_DEFAULT);
@@ -133,13 +118,11 @@ public class RadioStationService extends Service implements AsyncResponse {
     @Override
     public void onRebind(Intent intent) {
         super.onRebind(intent);
-        Log.d(tag, "onRebind");
         handler.postDelayed(run, 0);
     }
 
     @Override
     public void onDestroy() {
-        Log.d(tag, "onDestroy");
         mMediaPlayer.release();
         mMediaPlayer = null;
         wifiLock.release();
@@ -149,9 +132,23 @@ public class RadioStationService extends Service implements AsyncResponse {
     }
 
     @Override
-    public void processFinish(String output) {
-        mBuilder.setContentText(output);
+    public void processFinish(String result) {
+        mBuilder.setContentText(result);
         startForeground(1, mBuilder.build());
+        if (result.equals("")) {
+            Intent intentUpdate = new Intent();
+            intentUpdate.setAction(ACTION_MyUpdate);
+            intentUpdate.addCategory(Intent.CATEGORY_DEFAULT);
+            intentUpdate.putExtra(EXTRA_KEY_UPDATE, "Radio1 is offline right now");
+            sendBroadcast(intentUpdate);
+        }
+        if (!result.equals(title)) {
+            Intent intentUpdate = new Intent();
+            intentUpdate.setAction(ACTION_MyUpdate);
+            intentUpdate.addCategory(Intent.CATEGORY_DEFAULT);
+            intentUpdate.putExtra(EXTRA_KEY_UPDATE, result);
+            sendBroadcast(intentUpdate);
+        }
     }
 
     public class LocalBinder extends Binder {
@@ -175,7 +172,7 @@ public class RadioStationService extends Service implements AsyncResponse {
 
     public void getTitle() {
         if (isNetworkAvailable()) {
-            title = new DownloadWebpageTask(getApplicationContext());
+            title = new DownloadWebpageTask();
             title.delegate = this;
             title.execute();
         } else {
