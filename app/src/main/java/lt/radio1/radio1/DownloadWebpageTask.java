@@ -1,9 +1,6 @@
-package lt.radio1.radio;
+package lt.radio1.radio1;
 
-import android.content.Context;
-import android.content.Intent;
 import android.os.AsyncTask;
-import android.util.Log;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -11,8 +8,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import static lt.radio1.radio.RadioStationService.ACTION_MyUpdate;
-import static lt.radio1.radio.RadioStationService.EXTRA_KEY_UPDATE;
 
 public class DownloadWebpageTask extends AsyncTask<Void, Void, String> {
 

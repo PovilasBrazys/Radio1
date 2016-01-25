@@ -5,22 +5,33 @@ android {
     buildToolsVersion "23.0.2"
 
     defaultConfig {
-        applicationId "lt.radio1.radio"
+        applicationId "lt.radio1.radio1"
         minSdkVersion 15
         targetSdkVersion 23
-        versionCode 2
-        versionName "1.0"
+        versionCode 4
+        versionName "1.0.3"
     }
+
+    signingConfigs {
+        release {
+            storeFile file("../key/radio1-release-key.keystore")
+            keyAlias 'Radio_one'
+            storePassword 'nofacebook123'
+            keyPassword 'nofacebook123'
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:23.1.1'
     compile 'com.android.support:cardview-v7:23.1.1'

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="lt.radio1.radio">
+    package="lt.radio1.radio1">
 
     <uses-sdk android:minSdkVersion="15" android:targetSdkVersion="23"  />
     <uses-permission android:name="android.permission.INTERNET" />
@@ -15,11 +15,11 @@
         android:theme="@style/AppTheme">
 
         <service
-            android:name=".RadioStationService"
+            android:name="lt.radio1.radio1.RadioStationService"
             android:exported="false"></service>
 
         <activity
-            android:name=".MainActivity"
+            android:name="lt.radio1.radio1.MainActivity"
             android:label="@string/app_name"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:launchMode="singleInstance"
@@ -31,15 +31,15 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".ContactsActivity"
+            android:name="lt.radio1.radio1.ContactsActivity"
             android:label="Contacts"
             android:configChanges="orientation|keyboardHidden|screenSize"
             android:launchMode="singleInstance"
             android:theme="@style/AppTheme.NoActionBar1"
-            android:parentActivityName=".MainActivity" >
+            android:parentActivityName="lt.radio1.radio1.MainActivity" >
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
-                android:value=".MainActivity" />
+                android:value="lt.radio1.radio1.MainActivity" />
         </activity>
     </application>
 

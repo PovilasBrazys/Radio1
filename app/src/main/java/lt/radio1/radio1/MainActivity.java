@@ -1,4 +1,4 @@
-package lt.radio1.radio;
+package lt.radio1.radio1;
 
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -38,19 +38,17 @@ import android.widget.ViewFlipper;
 
 import java.util.List;
 
-import static lt.radio1.radio.RadioStationService.ACTION_MyUpdate;
-import static lt.radio1.radio.RadioStationService.EXTRA_KEY_UPDATE;
+import static lt.radio1.radio1.RadioStationService.ACTION_MyUpdate;
+import static lt.radio1.radio1.RadioStationService.EXTRA_KEY_UPDATE;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener, NavigationView.OnNavigationItemSelectedListener {
 
     private ImageButton buttonPlay, buttonStopPlay;
     private ImageButton buttonVolumeUp, buttonVolumeDown;
     private ViewFlipper mViewFlipper;
-    private ImageView imageWave;
     private TextView songTitle;
     private IntentFilter songTitleIntent;
     private SeekBar mVolumeSeekBar;
-    //private Animation rotate;
     private final GestureDetector detector = new GestureDetector(new SwipeGestureDetector());
     private Intent intent;
 
@@ -103,9 +101,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         buttonVolumeDown.setOnLongClickListener(this);
 
         songTitle = (TextView) findViewById(R.id.song_title);
-
-        imageWave = (ImageView) findViewById(R.id.wave_image);
-        //rotate = AnimationUtils.loadAnimation(this, R.anim.wobble);
 
         mViewFlipper = (ViewFlipper) findViewById(R.id.view_flipper);
         mViewFlipper.setFlipInterval(5000);
@@ -164,7 +159,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     if (!isPlaying) {
                         buttonStopPlay.setVisibility(View.VISIBLE);
                         buttonPlay.setVisibility(View.INVISIBLE);
-                        //imageWave.startAnimation(rotate);
                         intent.putExtra("soundVol", volume);
                         startService(intent);
                         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
@@ -178,7 +172,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (isPlaying) {
                     buttonPlay.setVisibility(View.VISIBLE);
                     buttonStopPlay.setVisibility(View.INVISIBLE);
-                    imageWave.setAnimation(null);
                     if (mBound) {
                         unbindService(mConnection);
                         mBound = false;
@@ -232,18 +225,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onStart() {
         super.onStart();
         new DownloadWebpageTask();
-        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
-        volume = sharedPref.getFloat("volume", 1f);
-        isPlaying = sharedPref.getBoolean("isPlaying", false);
-        mVolumeSeekBar.setProgress(100);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        volume = sharedPref.getFloat("volume", 1f);
+        isPlaying = sharedPref.getBoolean("isPlaying", false);
         registerReceiver(myBroadcastReceiver_Update, songTitleIntent);
         if (isPlaying) {
-            //imageWave.startAnimation(rotate);
             buttonPlay.setVisibility(View.INVISIBLE);
             bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
         } else {
@@ -256,6 +247,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onPause() {
         super.onPause();
+        SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
+        editor.putBoolean("isPlaying", isPlaying);
+        editor.putFloat("volume", volume);
+        editor.commit();
         mViewFlipper.stopFlipping();
     }
 
@@ -266,31 +261,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (mBound) {
             unbindService(mConnection);
         }
-        SharedPreferences.Editor editor = getPreferences(Context.MODE_PRIVATE).edit();
-        editor.putBoolean("isPlaying", isPlaying);
-        editor.putFloat("volume", volume);
-        editor.commit();
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // getMenuInflater().inflate(R.menu.main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
     }
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
     public boolean onNavigationItemSelected(MenuItem item) {
-        // Handle navigation view item clicks here.
         int id = item.getItemId();
 
         if (id == R.id.nav_facebook) {
