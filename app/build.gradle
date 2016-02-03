@@ -16,8 +16,8 @@ android {
         release {
             storeFile file("../key/radio1-release-key.keystore")
             keyAlias 'Radio_one'
-            storePassword 'nofacebook123'
-            keyPassword 'nofacebook123'
+            storePassword '**'
+            keyPassword '**'
         }
     }
 
