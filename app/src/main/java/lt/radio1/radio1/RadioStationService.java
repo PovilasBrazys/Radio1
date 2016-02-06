@@ -92,7 +92,7 @@ public class RadioStationService extends Service implements AsyncResponse, Media
         mMediaPlayer.setWakeMode(getApplicationContext(), PowerManager.PARTIAL_WAKE_LOCK);
         mMediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
         try {
-            mMediaPlayer.setDataSource("http://95.154.254.83:5394/");
+            mMediaPlayer.setDataSource("http://87.117.197.33:7971/");
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
         } catch (IllegalStateException e) {

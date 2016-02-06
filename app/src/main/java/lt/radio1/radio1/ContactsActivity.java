@@ -31,15 +31,6 @@ public class ContactsActivity extends AppCompatActivity{
         if (isNetworkAvailable()) {
             webView = (WebView) findViewById(R.id.webView);
             webView.getSettings().setJavaScriptEnabled(true);
-            webView.setWebViewClient(new WebViewClient() {
-                @Override
-                public void onPageFinished(WebView view, String url) {
-                    webView.loadUrl("javascript:(function() { " +
-                            "document.getElementsByClassName('menu_wrapper')[0].style.display='none'; " +
-                            "document.getElementsByClassName('top3 clearfix')[0].style.display='none'; " +
-                            "})()");
-                }
-            });
             webView.loadUrl("http://www.radio1.lt/Kontaktai.html");
         } else {
 

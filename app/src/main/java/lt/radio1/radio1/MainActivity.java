@@ -10,6 +10,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
+import android.graphics.BitmapFactory;
 import android.media.AudioManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -107,13 +108,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mViewFlipper.setFlipInterval(5000);
         mViewFlipper.setInAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_in_right));
         mViewFlipper.setOutAnimation(AnimationUtils.loadAnimation(getApplicationContext(), R.anim.slide_out_left));
-        ImageView imageView;
-        Resources res = getResources();
-        for (int i = 0; i < 3; i++){
-            imageView = new ImageView(this);
-            imageView.setImageDrawable(res.getDrawable(ints[i]));
+
+        for (int i = 0; i < 3; i++) {
+            final ImageView imageView = new ImageView(this);
+            imageView.setImageBitmap(BitmapFactory.decodeResource(getResources(), ints[i]));
             mViewFlipper.addView(imageView);
         }
+
         mViewFlipper.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(final View view, final MotionEvent event) {

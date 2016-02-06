@@ -16,7 +16,7 @@ public class DownloadWebpageTask extends AsyncTask<Void, Void, String> {
     @Override
     protected String doInBackground(Void... urls) {
         try {
-            return downloadUrl("http://95.154.254.83:5394/currentsong?sid=1");
+            return downloadUrl("http://radio1.lt/player/title.php");
         } catch (IOException e) {
             return "Unable to retrieve web page. URL may be invalid.";
         }
